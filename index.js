@@ -12,6 +12,7 @@ const config = require('./config.json');
 const discordClient = new Discord.Client();
 const MongoClient = MongoDB.MongoClient;
 var queues = {};
+const sudoers = ['username1', 'username2'];
 const colors = {
 	error: 0xB71C1C,
 	information: 0xFFEB3B,
@@ -97,12 +98,19 @@ class Queue {
 		}
 	}
 
-	remove(range) {
-		this.songs.splice(range[0]-1, (range.length === 2?range[1]-range[0]:0)+1);
-		this.textChannel.send({embed: {
-			color: colors.information,
-			description: `Removed song${range.length === 2?'s':''} ${range[0]}${range.length === 2?` - ${range[1]}`:''} from the queue`
-		}});
+	remove(author, range) {
+		if (sudoers.includes(author.username)) {
+			this.songs.splice(range[0]-1, (range.length === 2?range[1]-range[0]:0)+1);
+			this.textChannel.send({embed: {
+				color: colors.information,
+				description: `Removed song${range.length === 2?'s':''} ${range[0]}${range.length === 2?` - ${range[1]}`:''} from the queue`
+			}});
+		} else {
+			this.textChannel.send({embed: {
+				color: colors.error,
+				description: "You don't have the permissions!"
+			}});
+		}
 	}
 
 	addPlaylist(playlist, songs) {
@@ -163,22 +171,29 @@ class Queue {
 		}
 	}
 
-	jump(to) {
-		if (this.songs[to-1]) {
-			if (this.dispatcher) {
-				this.status = 'playing';
-				this.position = to-2;
-				this.dispatcher.end();
+	jump(author, to) {
+		if (sudoers.includes(author.username)) {
+			if (this.songs[to-1]) {
+				if (this.dispatcher) {
+					this.status = 'playing';
+					this.position = to-2;
+					this.dispatcher.end();
+				} else {
+					this.textChannel.send({embed: {
+						color: colors.error,
+						description: 'No song is currently playing'
+					}});
+				}
 			} else {
 				this.textChannel.send({embed: {
 					color: colors.error,
-					description: 'No song is currently playing'
+					description: 'No song was found at that position!'
 				}});
 			}
 		} else {
 			this.textChannel.send({embed: {
 				color: colors.error,
-				description: 'No song was found at that position!'
+				description: "You don't have the permissions!"
 			}});
 		}
 	}
@@ -232,7 +247,7 @@ discordClient.on('message', message => {
 				color: 0xFB8C00,
 				title: 'Help',
 				description: "Hello! My name is `We don't live in Utopia`\
-				(Version 0.1). It's true, and you know it. My prefix is `"+
+				(Version 0.1.2). It's true, and you know it. My prefix is `"+
 				config.prefix+"`. The commands themselves are case insensitive,\
 				and both `"+config.prefix+"<command>` and `"+config.prefix+
 				" <command> will work.` But, the values given are not\
@@ -241,7 +256,7 @@ discordClient.on('message', message => {
 					name: 'Supported commands',
 					value: 'The currently supported commands are `help`,\
 					`ping`, `playlist`, `play`, `repeat`, `pause`, `resume`,\
-					`next`, `previous`, `jump`, `remove`, `queue`, `lyrics`,\
+					`next`, `previous`, `jump`, `remove`, `shuffle`, `queue`, `lyrics`,\
 					`song`, and `stop`.'
 				}, {
 					name: 'Command info',
@@ -250,16 +265,17 @@ discordClient.on('message', message => {
 						**ping**: I'll respond with pong
 						**playlist**: Create, play and modify playlists
 						**play <url/query>**: Play the audio from the YouTube video url or the first video result with the search query
-						**repeat**: Repeat the currently playing song (if any)
-						**pause**: Pause the currently playing song (if any)
+						**repeat**: Repeat the currently playing song
+						**pause**: Pause the currently playing song
 						**resume**: Resume if the song is paused
-						**next**: Play the next song in the queue (if any)
-						**previous**: Play the previous track in the queue (if any)
-						**jump <to>**: Jump to a track in the queue (if it exists)
+						**next**: Play the next song in the queue
+						**previous**: Play the previous track in the queue
+						**jump <to>**: Jump to a track in the queue
 						**remove <start(|end)>**: Remove a track, or specify 2 numbers separated with \`|\` to remove a range of tracks
+						**shuffle**: Shuffle the queue
 						**queue**: Display the queue
 						**lyrics (<query>)**: Display the lyrics for the currently playing song, or the given query
-						**song**: Display the currently playing song (if any)
+						**song**: Display the currently playing song
 						**stop**: Stop the currently playing song, clear the queue, and exit the voice channel
 					`
 				}, {
@@ -438,7 +454,7 @@ discordClient.on('message', message => {
 		} else if (command.toLowerCase() === 'next') {
 			if (message.member.voiceChannel) {
 				queue(message.guild).textChannel = message.channel;
-				queue(message.guild).jump(queue(message.guild).position+2);
+				queue(message.guild).jump(message.author, queue(message.guild).position+2);
 			} else {
 				message.channel.send({embed: {
 					color: colors.error,
@@ -448,7 +464,7 @@ discordClient.on('message', message => {
 		} else if (command.toLowerCase() === 'previous') {
 			if (message.member.voiceChannel) {
 				queue(message.guild).textChannel = message.channel;
-				queue(message.guild).jump(queue(message.guild).position);
+				queue(message.guild).jump(message.author, queue(message.guild).position);
 			} else {
 				message.channel.send({embed: {
 					color: colors.error,
@@ -458,7 +474,7 @@ discordClient.on('message', message => {
 		} else if (command.split(' ')[0].toLowerCase() === 'jump' && !isNaN(command.substr(5)) && parseInt(command.substr(5)) > 0) {
 			if (message.member.voiceChannel) {
 				queue(message.guild).textChannel = message.channel;
-				queue(message.guild).jump(parseInt(command.substr(5)));
+				queue(message.guild).jump(message.author, parseInt(command.substr(5)));
 			} else {
 				message.channel.send({embed: {
 					color: colors.error,
@@ -477,7 +493,7 @@ discordClient.on('message', message => {
 						}});
 					}
 					queue(message.guild).textChannel = message.channel;
-					queue(message.guild).remove(range);
+					queue(message.guild).remove(message.author, range);
 				} else {
 					message.channel.send({embed: {
 						color: colors.error,
