@@ -12,7 +12,7 @@ const config = require('./config.json');
 const discordClient = new Discord.Client();
 const MongoClient = MongoDB.MongoClient;
 var queues = {};
-const sudoers = ['username1', 'username2'];
+const sudoers = ['username1', 'username2', 'username3'];
 const colors = {
 	error: 0xB71C1C,
 	information: 0xFFEB3B,
@@ -52,7 +52,7 @@ class Queue {
 			} else {
 				this.textChannel.send({embed: {
 					color: colors.error,
-					description: 'No song is currently playing'
+					description: 'No song is currently playing. Just bother yourself!'
 				}}).catch(err => this.textChannel.send(`Error: ${err}`));
 			}
 		}
@@ -61,6 +61,7 @@ class Queue {
 	showQueue() {
 		if (this.textChannel) {
 			let queue = '';
+			if (this.song.length > 12) {}
 			for (let i=1; i<=this.songs.length; i++) {
 				queue += `\n${i}) ${this.songs[i-1][0]}`;
 				if (this.position+1 === i) {
@@ -79,7 +80,7 @@ class Queue {
 			} else {
 				message.channel.send({embed: {
 					color: colors.error,
-					description: 'There are no songs left in the queue!'
+					description: 'There are no songs left in the queue, just bother yourself!'
 				}});
 			}
 		}
@@ -108,7 +109,7 @@ class Queue {
 		} else {
 			this.textChannel.send({embed: {
 				color: colors.error,
-				description: "You don't have the permissions!"
+				description: "You don't have the permissions, just bother yourself!"
 			}});
 		}
 	}
@@ -181,19 +182,19 @@ class Queue {
 				} else {
 					this.textChannel.send({embed: {
 						color: colors.error,
-						description: 'No song is currently playing'
+						description: 'No song is currently playing, just bother yourself!'
 					}});
 				}
 			} else {
 				this.textChannel.send({embed: {
 					color: colors.error,
-					description: 'No song was found at that position!'
+					description: 'No song was found at that position, just bother yourself!'
 				}});
 			}
 		} else {
 			this.textChannel.send({embed: {
 				color: colors.error,
-				description: "You don't have the permissions!"
+				description: "You don't have the permissions, just bother yourself!"
 			}});
 		}
 	}
@@ -287,7 +288,7 @@ discordClient.on('message', message => {
 				}],
 				footer: {
 					icon_url: 'https://firebasestorage.googleapis.com/v0/b/cubetastic-33.appspot.com/o/profile-pics%2FAravind%20k?alt=media&token=2db6b9d0-62c7-40df-bf99-e64e34db4119',
-					text: '© 2018 | aravk33'
+					text: '© 2018 | aravk33 | Just bother yourself!'
 				}
 			}});
 		} else if (command.toLowerCase() === 'ping') {
@@ -423,7 +424,7 @@ discordClient.on('message', message => {
 			} else {
 				message.channel.send({embed: {
 					color: colors.error,
-					description: 'You need to be in a voice channel first!'
+					description: 'You need to be in a voice channel first. Just bother yourself!'
 				}});
 			}
 		} else if (command.toLowerCase() === 'repeat') {
@@ -433,7 +434,7 @@ discordClient.on('message', message => {
 			} else {
 				message.channel.send({embed: {
 					color: colors.error,
-					description: 'You need to be in a voice channel first!'
+					description: 'You need to be in a voice channel first. Just bother yourself!'
 				}});
 			}
 		} else if (command.toLowerCase() === 'pause') {
@@ -448,7 +449,7 @@ discordClient.on('message', message => {
 			} else {
 				message.channel.send({embed: {
 					color: colors.error,
-					description: 'You need to be in a voice channel first!'
+					description: 'You need to be in a voice channel first. Just bother yourself!'
 				}});
 			}
 		} else if (command.toLowerCase() === 'next') {
@@ -458,7 +459,7 @@ discordClient.on('message', message => {
 			} else {
 				message.channel.send({embed: {
 					color: colors.error,
-					description: 'You need to be in a voice channel first!'
+					description: 'You need to be in a voice channel first. Just bother yourself!'
 				}});
 			}
 		} else if (command.toLowerCase() === 'previous') {
@@ -468,7 +469,7 @@ discordClient.on('message', message => {
 			} else {
 				message.channel.send({embed: {
 					color: colors.error,
-					description: 'You need to be in a voice channel first!'
+					description: 'You need to be in a voice channel first. Just bother yourself!'
 				}});
 			}
 		} else if (command.split(' ')[0].toLowerCase() === 'jump' && !isNaN(command.substr(5)) && parseInt(command.substr(5)) > 0) {
@@ -478,7 +479,7 @@ discordClient.on('message', message => {
 			} else {
 				message.channel.send({embed: {
 					color: colors.error,
-					description: 'You need to be in a voice channel first!'
+					description: 'You need to be in a voice channel first. Just bother yourself!'
 				}});
 			}
 		} else if (command.split(' ')[0].toLowerCase() === 'remove') {
@@ -489,7 +490,7 @@ discordClient.on('message', message => {
 					if ((range[0] === queue(message.guild).position) || (range.length === 2 && Array.from({length: range[1]-range[0]}, (x, i) => i+range[0]-1).includes(queue(message.guild).position))) {
 						message.channel.send({embed: {
 							color: colors.error,
-							description: "You can't remove the currently playing song!"
+							description: "You can't remove the currently playing song, just bother yourself!"
 						}});
 					}
 					queue(message.guild).textChannel = message.channel;
@@ -497,7 +498,7 @@ discordClient.on('message', message => {
 				} else {
 					message.channel.send({embed: {
 						color: colors.error,
-						description: 'You need to be in a voice channel first!'
+						description: 'You need to be in a voice channel first. Just bother yourself!'
 					}});
 				}
 			}
@@ -508,7 +509,7 @@ discordClient.on('message', message => {
 			} else {
 				message.channel.send({embed: {
 					color: colors.error,
-					description: 'You need to be in a voice channel first!'
+					description: 'You need to be in a voice channel first. Just bother yourself!'
 				}});
 			}
 		} else if (command.toLowerCase() === 'queue') {
@@ -579,7 +580,7 @@ discordClient.on('message', message => {
 			} else {
 				message.channel.send({embed: {
 					color: colors.error,
-					description: 'No song is currently playing'
+					description: 'No song is currently playing, just bother yourself!'
 				}}).catch(err => console.log(`Error: ${err}`));
 			}
 		} else if (command.toLowerCase() === 'song') {
@@ -599,7 +600,7 @@ discordClient.on('message', message => {
 			} else {
 				message.channel.send({embed: {
 					color: colors.error,
-					description: 'You need to be in a voice channel first!'
+					description: 'You need to be in a voice channel first. Just bother yourself!'
 				}});
 			}
 		}
