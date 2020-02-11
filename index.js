@@ -150,6 +150,7 @@ class Queue {
 				this.play(this.songs[this.position+(this.status === 'repeating'?0:1)]);
 			}
 		});
+		this.dispatcher.setVolumeLogarithmic(1)
 	}
 
 	repeat() {
