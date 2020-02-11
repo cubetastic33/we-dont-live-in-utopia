@@ -130,6 +130,7 @@ class Queue {
 		this.dispatcher = this.voiceConnection.playStream(
 			ytdl(song[1], { filter: 'audioonly' })
 		);
+		this.dispatcher.setVolumeLogarithmic(1);
 		this.position = this.songs.indexOf(song);
 		if (this.status !== 'repeating') this.status = 'playing';
 		this.textChannel.send({embed: {
