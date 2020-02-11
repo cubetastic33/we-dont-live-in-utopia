@@ -1,4 +1,6 @@
+const http = require('http');
 const https = require('https');
+const express = require('express');
 const Discord = require('discord.js');
 const MongoDB = require('mongodb');
 const ytdl = require('ytdl-core');
@@ -7,12 +9,21 @@ const cheerio = require('cheerio');
 const config = require('./config.json');
 
 // Invite link:
-// https://discordapp.com/oauth2/authorize?&client_id=523114941394452480&scope=bot&permissions=8
+// https://discordapp.com/oauth2/authorize?&client_id=523114941394452480&scope=bot&permissions=36961600
+
+const app = express();
+app.get("/", (request, response) => {
+  console.log(Date.now() + " Ping Received");
+  response.sendStatus(200);
+});
+app.listen(process.env.PORT);
+setInterval(() => {
+  http.get(`http://${process.env.PROJECT_DOMAIN}.glitch.me/`);
+}, 280000);
 
 const discordClient = new Discord.Client();
 const MongoClient = MongoDB.MongoClient;
 var queues = {};
-const sudoers = ['username1', 'username2', 'username3'];
 const colors = {
 	error: 0xB71C1C,
 	information: 0xFFEB3B,
@@ -100,18 +111,11 @@ class Queue {
 	}
 
 	remove(author, range) {
-		if (sudoers.includes(author.username)) {
-			this.songs.splice(range[0]-1, (range.length === 2?range[1]-range[0]:0)+1);
-			this.textChannel.send({embed: {
-				color: colors.information,
-				description: `Removed song${range.length === 2?'s':''} ${range[0]}${range.length === 2?` - ${range[1]}`:''} from the queue`
-			}});
-		} else {
-			this.textChannel.send({embed: {
-				color: colors.error,
-				description: "You don't have the permissions, just bother yourself!"
-			}});
-		}
+		this.songs.splice(range[0]-1, (range.length === 2?range[1]-range[0]:0)+1);
+		this.textChannel.send({embed: {
+			color: colors.information,
+			description: `Removed song${range.length === 2?'s':''} ${range[0]}${range.length === 2?` - ${range[1]}`:''} from the queue`
+		}});
 	}
 
 	addPlaylist(playlist, songs) {
@@ -173,28 +177,21 @@ class Queue {
 	}
 
 	jump(author, to) {
-		if (sudoers.includes(author.username)) {
-			if (this.songs[to-1]) {
-				if (this.dispatcher) {
-					this.status = 'playing';
-					this.position = to-2;
-					this.dispatcher.end();
-				} else {
-					this.textChannel.send({embed: {
-						color: colors.error,
-						description: 'No song is currently playing, just bother yourself!'
-					}});
-				}
+		if (this.songs[to-1]) {
+			if (this.dispatcher) {
+				this.status = 'playing';
+				this.position = to-2;
+				this.dispatcher.end();
 			} else {
 				this.textChannel.send({embed: {
 					color: colors.error,
-					description: 'No song was found at that position, just bother yourself!'
+					description: 'No song is currently playing, just bother yourself!'
 				}});
 			}
 		} else {
 			this.textChannel.send({embed: {
 				color: colors.error,
-				description: "You don't have the permissions, just bother yourself!"
+				description: 'No song was found at that position, just bother yourself!'
 			}});
 		}
 	}
@@ -206,14 +203,14 @@ function queue(guild) {
 	return queues[guild.id];
 }
 
-discordClient.login(config.token);
+discordClient.login(process.env.TOKEN);
 
 discordClient.on('ready', () => {
 	console.log(`Logged in as ${discordClient.user.tag}!`);
 	discordClient.user.setActivity(`${config.prefix}help`, { type: 'LISTENING' });
 });
 
-MongoClient.connect(config.mongoDBURI, {
+MongoClient.connect(process.env.MONGODBURI, {
 	useNewUrlParser: true,
 	reconnectTries: Number.MAX_VALUE,
 	reconnectInterval: 1000}, function(err, client) {
@@ -240,6 +237,11 @@ discordClient.on('guildMemberAdd', member => {
 });
 
 discordClient.on('message', message => {
+	if (message.content.toLowerCase().includes('fuck')) {
+		message.channel.send('Swearing in the ~~corridors~~ channels? Just bother yourself!');
+	} else if (message.content === 'hello' || message.content === 'hi' || message.content.includes('👋')) {
+		message.react('👋');
+	}
 	if (message.content.substr(0, config.prefix.length) == config.prefix) {
 		let command = message.content.substr(config.prefix.length).trim();
 		if (command.toLowerCase() === 'help') {
@@ -247,48 +249,46 @@ discordClient.on('message', message => {
 			message.channel.send({embed: {
 				color: 0xFB8C00,
 				title: 'Help',
-				description: "Hello! My name is `We don't live in Utopia`\
-				(Version 0.1.2). It's true, and you know it. My prefix is `"+
-				config.prefix+"`. The commands themselves are case insensitive,\
-				and both `"+config.prefix+"<command>` and `"+config.prefix+
-				" <command> will work.` But, the values given are not\
-				necessarily case insensitive.",
+				description: "Hello! My name is `We don't live in Utopia` "+
+					"(Version 0.1.3). It's true, and you know it. My prefix is `"+
+					config.prefix+"`. The commands themselves are case insensitive, "+
+					"and both `"+config.prefix+"<command>` and `"+config.prefix+
+					" <command> will work.` But, the values given are not "+
+					"necessarily case insensitive.",
 				fields: [{
 					name: 'Supported commands',
-					value: 'The currently supported commands are `help`,\
-					`ping`, `playlist`, `play`, `repeat`, `pause`, `resume`,\
-					`next`, `previous`, `jump`, `remove`, `shuffle`, `queue`, `lyrics`,\
-					`song`, and `stop`.'
+					value: 'The currently supported commands are `help`, `ping`, `playlist`, `play`, `repeat`, `pause`, `resume`, `next`, `previous`, `jump`, `remove`, `shuffle`, `queue`, `lyrics`, `song`, and `stop`.'
 				}, {
 					name: 'Command info',
-					value: `
-						**help**: Display this help message
-						**ping**: I'll respond with pong
-						**playlist**: Create, play and modify playlists
-						**play <url/query>**: Play the audio from the YouTube video url or the first video result with the search query
-						**repeat**: Repeat the currently playing song
-						**pause**: Pause the currently playing song
-						**resume**: Resume if the song is paused
-						**next**: Play the next song in the queue
-						**previous**: Play the previous track in the queue
-						**jump <to>**: Jump to a track in the queue
-						**remove <start(|end)>**: Remove a track, or specify 2 numbers separated with \`|\` to remove a range of tracks
-						**shuffle**: Shuffle the queue
-						**queue**: Display the queue
-						**lyrics (<query>)**: Display the lyrics for the currently playing song, or the given query
-						**song**: Display the currently playing song
-						**stop**: Stop the currently playing song, clear the queue, and exit the voice channel
-					`
+					value: `**help**: Display this help message\n`+
+						`**ping**: I'll respond with pong\n`+
+						`**playlist**: Create, play and modify playlists\n`+
+						`**play <url/query>**: Play the audio from the YouTube `+
+						`video url or the first video result with the search query\n`+
+						`**repeat**: Repeat the currently playing song\n`+
+						`**pause**: Pause the currently playing song\n`+
+						`**resume**: Resume if the song is paused\n`+
+						`**next**: Play the next song in the queue\n`+
+						`**previous**: Play the previous track in the queue\n`+
+						`**jump <to>**: Jump to a track in the queue\n`+
+						`**remove <start(|end)>**: Remove a track, or specify `+
+						`2 numbers separated with \`|\` to remove a range of tracks\n`+
+						`**shuffle**: Shuffle the queue\n`+
+						`**queue**: Display the queue\n`+
+						`**lyrics (<query>)**: Display the lyrics for the currently `+
+						`playing song, or the given query\n`+
+						`**song**: Display the currently playing song\n`+
+						`**stop**: Stop the currently playing song, clear the queue, and exit the voice channel`
 				}, {
 					name: 'Playlists',
-					value: `
-						**playlist create <name> <list of|songs you|want to|add>**: Create a playlist of the given name with the given songs. The songs should be separated with \`|\`.
-						**playlist play <name>**: Add the playlist to the queue
-					`
+					value: `**playlist create <name> <list of|songs you|want to|add>**: `+
+						`Create a playlist of the given name with the given songs. The songs `+
+						`should be separated with \`|\`.\n`+
+						`**playlist play <name>**: Add the playlist to the queue`
 				}],
 				footer: {
-					icon_url: 'https://firebasestorage.googleapis.com/v0/b/cubetastic-33.appspot.com/o/profile-pics%2FAravind%20k?alt=media&token=2db6b9d0-62c7-40df-bf99-e64e34db4119',
-					text: '© 2018 | aravk33 | Just bother yourself!'
+					icon_url: 'https://cdn.discordapp.com/avatars/483296676824481792/1def0a5207ab837b803b7ffd9a4e2625.png',
+					text: '© 12020 HE | aravk33 | Just bother yourself!'
 				}
 			}});
 		} else if (command.toLowerCase() === 'ping') {
@@ -299,7 +299,7 @@ discordClient.on('message', message => {
 			if (command.split(' ')[1].toLowerCase() === 'create' && command.split(' ').length > 3) {
 				// Create a new playlist
 				// Connect to database
-				MongoClient.connect(config.mongoDBURI, {useNewUrlParser: true}, function(err, client) {
+				MongoClient.connect(process.env.MONGODBURI, {useNewUrlParser: true}, function(err, client) {
 					if (err) return console.log('Error:', err);
 					const collection = client.db('music').collection('playlists');
 					// Add the playlist to the collection if the name is available
@@ -313,7 +313,7 @@ discordClient.on('message', message => {
 							for (var i=0; i<songs.length; i++) {
 								let opts = {
 									maxResults: 1,
-									key: config.googleApiKey,
+									key: process.env.GOOGLEAPIKEY,
 									type: 'video'
 								}
 								search(songs[i], opts, function(err, results) {
@@ -342,7 +342,7 @@ discordClient.on('message', message => {
 			} else if (command.split(' ')[1].toLowerCase() === 'delete') {
 				// Delete a playlist
 				// Connect to database
-				MongoClient.connect(config.mongoDBURI, {useNewUrlParser: true}, function(err, client) {
+				MongoClient.connect(process.env.MONGODBURI, {useNewUrlParser: true}, function(err, client) {
 					if (err) return console.log('Error:', err);
 					const collection = client.db('music').collection('playlists');
 					// Add the playlist to the collection if the name is available
@@ -372,7 +372,7 @@ discordClient.on('message', message => {
 				// Connect to database if user is in a voice channel
 				if (message.member.voiceChannel) {
 					message.member.voiceChannel.join().then(connection => {
-						MongoClient.connect(config.mongoDBURI, {useNewUrlParser: true}, function(err, client) {
+						MongoClient.connect(process.env.MONGODBURI, {useNewUrlParser: true}, function(err, client) {
 							if (err) return console.log('Error:', err);
 							const collection = client.db('music').collection('playlists');
 							// Add the playlist to the queue if it exists
@@ -410,7 +410,7 @@ discordClient.on('message', message => {
 					} else {
 						let opts = {
 							maxResults: 1,
-							key: config.googleApiKey,
+							key: process.env.GOOGLEAPIKEY,
 							type: 'video'
 						}
 						search(command.substr(5), opts, function(err, results) {
@@ -521,7 +521,7 @@ discordClient.on('message', message => {
 				let req = https.request({
 					host: 'api.genius.com',
 					path: '/search?q='+encodeURIComponent(command.length > 1?command.substring(7):queue(message.guild).songs[queue(message.guild).position][0]),
-					headers: {'Authorization': `Bearer ${config.geniusApiKey}`}
+					headers: {'Authorization': `Bearer ${process.env.GENIUSAPIKEY}`}
 				}, res => {
 					res.setEncoding('utf8');
 					var search_results = '';
@@ -594,7 +594,7 @@ discordClient.on('message', message => {
 						queue(message.guild).dispatcher.end();
 					if (queue(message.guild).voiceConnection)
 						queue(message.guild).voiceConnection.disconnect();
-					delete queues[message.guild.id.toString];
+					delete queues[message.guild.id.toString()];
 				}
 				message.react('🛑');
 			} else {
